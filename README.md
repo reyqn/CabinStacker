@@ -1,0 +1,17 @@
+# CabinStacker
+
+This is a Stardew Valley mod allowing you to play with as many players as you want (set playerLimit to whatever you want in %appdata%/StardewValley/startup_preferences), without having cabins taking up too much space on your farm.
+
+- Every player running into the main FarmHouse door à la platform 9¾ will enter their own cabin (you shouldn't click on the door).
+
+- If a cabin is missing and a new player wants to join, a new one will automatically be created.
+
+- You can move your cabin on the Farm map by standing where you want it to appear and entering `!move` in the chat. You can move it back away the same way.
+
+- You can visit other players' cabins by entering `!warp [player_name]` in the chat while already at home.
+
+This mod should only run on the host. It should be compatible with most mods that don't change doors or mailboxes locations, however it does use harmony, so it will probably have issues with some mods.
+
+Behind the scenes, every player has its own cabin hidden out of bounds, and the host edits parts of the data sent to the clients in order to move them correctly between their cabins and the farm.
+
+I created this mod because I wanted to run a Stardew Valley server for me and my friends, so I use it in conjunction with [this other mod](https://github.com/ObjectManagerManager/SMAPIDedicatedServerMod) which is fully compatible.
