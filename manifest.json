@@ -1,10 +1,10 @@
 {
     "Name": "CabinStacker",
     "Author": "reyqn",
-    "Version": "1.0.1",
+    "Version": "1.0.2",
     "Description": "This will allow you to stack cabins in multiplayer, each player using the farmhouse as its own cabin. You can now play with an unlimited number of friends, without wasting space for your crops and other buildings.",
     "UniqueID": "reyqn.CabinStacker",
     "EntryDll": "CabinStacker.dll",
     "MinimumApiVersion": "3.0.0",
-    "UpdateKeys": []
+    "UpdateKeys": ["GitHub:reyqn/CabinStacker"]
 }
