@@ -106,11 +106,11 @@ namespace CabinStacker.Harmony
         {
 			try
 			{
-				switch (message.Split('!').LastOrDefault()?.Split(' ').FirstOrDefault()) {
-					case "move":
+				switch (message.Split(' ').FirstOrDefault()) {
+					case "!move":
 						MoveCommandListener.ChatReceived(sourceFarmer);
 						break;
-					case "warp":
+					case "!warp":
 						WarpCommandListener.ChatReceived(sourceFarmer, message);
 						break;
 				}
