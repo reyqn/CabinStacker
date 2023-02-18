@@ -60,16 +60,18 @@ namespace CabinStacker.Helper
 			building.load();
 		}
 
-		public static void MoveCabinsForFestival()
+		public static void MoveCabinsForWarpingEvent()
 		{
-			if (_cabinsToMove == null && Game1.isFestival()) {
+			var currentEvent = Game1.currentLocation?.currentEvent;
+			var isWarpingEvent = currentEvent?.isFestival == true || currentEvent?.isWedding == true;
+			if (_cabinsToMove == null && isWarpingEvent) {
                 _cabinsToMove = Game1.getFarm().buildings.Where(o => o.tileX.Value > 1000).ToArray();
                 foreach(var cabin in _cabinsToMove) {
                     cabin.tileX.Value = 63;
                     cabin.tileY.Value = 17;
                 }
             }
-            else if (_cabinsToMove != null && !Game1.isFestival())
+            else if (_cabinsToMove != null && !isWarpingEvent)
             {
                 foreach(var cabin in _cabinsToMove) {
                     cabin.tileX.Value = 1070;

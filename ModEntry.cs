@@ -23,8 +23,6 @@ namespace CabinStacker
             foreach (var cabin in Game1.getFarm().buildings.Where(o => o.tileX.Value > 1000)) {
                 cabin.humanDoor.Value = new Point(-1006, -4);
             }
-            //Add fallback warp in case something goes wrong
-            Game1.getFarm().warps.Add(new Warp(1070, 20, "Farm", 64, 15, false));
 
             var farmhouseWarp = Game1.getLocationFromName("FarmHouse").warps.First();
             Game1.getFarm().warps.Add(new Warp(64, 14, Game1.player.homeLocation.Value, farmhouseWarp.X, farmhouseWarp.Y - 1, false));
@@ -36,7 +34,7 @@ namespace CabinStacker
             if (!Context.IsWorldReady)
                 return;
 
-            CabinHelper.MoveCabinsForFestival();
+            CabinHelper.MoveCabinsForWarpingEvent();
         }
     }
 }
