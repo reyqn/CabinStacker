@@ -10,11 +10,9 @@ namespace CabinStacker
 {
     public class ModEntry : Mod
     {
-        public static Farmer MovingFarmer { get; set; }
-
         public override void Entry(IModHelper helper)
         {
-            HarmonyPatcher.Initialize(Monitor, ModManifest.UniqueID);
+            HarmonyPatcher.Initialize(Monitor, helper, ModManifest.UniqueID);
             helper.Events.GameLoop.UpdateTicked += OnUpdate;
             helper.Events.GameLoop.SaveLoaded += OnSaveLoaded;
         }

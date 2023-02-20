@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using CabinStacker.ChatCommands;
 using CabinStacker.Helper;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
+using Netcode;
 using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Buildings;
@@ -15,14 +17,16 @@ namespace CabinStacker.Harmony
 	internal class HarmonyPatcher
 	{
 		private static IMonitor _monitor;
+		private static IModHelper _helper;
 
-		internal static void Initialize(IMonitor monitor, string id)
+		internal static void Initialize(IMonitor monitor, IModHelper modHelper, string id)
 		{
 			_monitor = monitor;
+			_helper = modHelper;
 			var harmonyInstance = new HarmonyLib.Harmony(id);
 			harmonyInstance.Patch(original: AccessTools.Method(typeof(GameServer), nameof(GameServer.sendAvailableFarmhands)), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(SendAvailableFarmhands_Prefix)));
-			harmonyInstance.Patch(original: AccessTools.Method(typeof(GameServer), nameof(GameServer.sendMessage), new[]{typeof(long), typeof(byte), typeof(Farmer), typeof(object[])}), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(SendMessage3_Prefix)));
-			harmonyInstance.Patch(original: AccessTools.Method(typeof(GameServer), nameof(GameServer.sendMessage), new[]{typeof(long), typeof(OutgoingMessage)}), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(SendMessage6_Prefix)));
+			harmonyInstance.Patch(original: AccessTools.Method(typeof(GameServer), nameof(GameServer.sendMessage), new[]{typeof(long), typeof(byte), typeof(Farmer), typeof(object[])}), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(SendMessage_Prefix)));
+			harmonyInstance.Patch(original: AccessTools.Method(typeof(Multiplayer), nameof(StardewValley.Multiplayer.broadcastLocationDelta)), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(BroadcastLocationDelta_Prefix)));
 			harmonyInstance.Patch(original: AccessTools.Method(typeof(Building), nameof(Building.updateInteriorWarps)), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(UpdateInteriorWarps_Prefix)));
 			harmonyInstance.Patch(original: AccessTools.Method(typeof(ChatBox), nameof(ChatBox.receiveChatMessage)), postfix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(ReceiveChatMessage_Postfix)));
 		}
@@ -42,7 +46,7 @@ namespace CabinStacker.Harmony
 
 		private static readonly Multiplayer Multiplayer = new();
 
-		public static bool SendMessage3_Prefix(
+		public static bool SendMessage_Prefix(
 			long peerId,
 			byte messageType,
 			Farmer sourceFarmer,
@@ -72,48 +76,65 @@ namespace CabinStacker.Harmony
 			}
 			catch (Exception e)
 			{
-				_monitor.Log($"Failed in {nameof(SendMessage3_Prefix)}:\n{e}", LogLevel.Error);
+				_monitor.Log($"Failed in {nameof(SendMessage_Prefix)}:\n{e}", LogLevel.Error);
 				return true;
 			}
 		}
 
-		public static bool SendMessage6_Prefix(
-			long peerId,
-			OutgoingMessage message)
+		public static bool BroadcastLocationDelta_Prefix(GameLocation loc)
 		{
-			try
-			{
-				if (ModEntry.MovingFarmer?.UniqueMultiplayerID != peerId || message.MessageType != 6 || message.Data.Count != 3 || message.Data[1].ToString() != "Farm") return true;
+			try {
+				if (loc is not Farm farm)
+					return true;
 
-				var data = (byte[])message.Data[2];
-				var strData = Convert.ToHexString(data);
-				if (!strData.EndsWith("11FCFFFFFCFFFFFF")) return true;
+				if (loc.Root is null || !loc.Root.Dirty)
+					return false;
 				
-				ModEntry.MovingFarmer = null;
+				var cabins = farm.buildings.Where(o => o.isCabin && _helper.Reflection.GetField<List<INetSerializable>>(o.NetFields, "fields").GetValue()[10].Dirty).Select(o => o.nameOfIndoors).ToArray();
+				if (cabins.Length != 1)
+					return true;
+				
+				var farmer = Game1.getAllFarmhands().Where(o => o.homeLocation.Value.Equals(cabins[0])).ToArray();
 
-				data[^32] = 64;
-				data[^31] = 0;
-				data[^30] = 0;
-				data[^29] = 0;
+				var data = Multiplayer.writeObjectDeltaBytes(loc.Root);
+				var strData = Convert.ToHexString(data);
+				
+				if (!strData.Contains("3F0000000F000000") || !strData.Contains("11FCFFFFFCFFFFFF"))
+					farmer = Array.Empty<Farmer>();
+				
+				var message = new OutgoingMessage(6, Game1.player, false, loc.Name, data);
 
-				data[^8] = 18;
-				data[^7] = 252;
-				data[^6] = 255;
-				data[^5] = 255;
-
-				var obj = new[]
+				void Action(Farmer f)
 				{
-					message.Data[0],
-					message.Data[1],
-					data
-				};
+					if (f == Game1.player) return;
+					Game1.server.sendMessage(f.UniqueMultiplayerID, message);
+				}
 
-				Game1.server.sendMessage(peerId, new OutgoingMessage(message.MessageType, message.FarmerID, obj));
+				foreach (var farmers in Game1.otherFarmers.Values.Except(farmer))
+					Action(farmers);
+
+				if (farmer.Length != 1) return false;
+
+				var warpIndex = strData.IndexOf("3F0000000F000000", StringComparison.Ordinal)/2;
+				var doorIndex = strData.IndexOf("11FCFFFFFCFFFFFF", StringComparison.Ordinal)/2;
+
+				data[warpIndex] = 64;
+				data[warpIndex+1] = 0;
+				data[warpIndex+2] = 0;
+				data[warpIndex+3] = 0;
+
+				data[doorIndex] = 18;
+				data[doorIndex+1] = 252;
+				data[doorIndex+2] = 255;
+				data[doorIndex+3] = 255;
+					
+				message = new OutgoingMessage(6, Game1.player, false, loc.Name, data);
+				Action(farmer.First());
+
 				return false;
 			}
-			catch (Exception e)
-			{
-				_monitor.Log($"Failed in {nameof(SendMessage6_Prefix)}:\n{e}", LogLevel.Error);
+			catch (Exception e) {
+				_monitor.Log($"Failed in {nameof(BroadcastLocationDelta_Prefix)}:\n{e}", LogLevel.Error);
 				return true;
 			}
 		}
