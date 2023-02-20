@@ -9,6 +9,7 @@ using Netcode;
 using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Buildings;
+using StardewValley.Locations;
 using StardewValley.Menus;
 using StardewValley.Network;
 
@@ -29,6 +30,7 @@ namespace CabinStacker.Harmony
 			harmonyInstance.Patch(original: AccessTools.Method(typeof(Multiplayer), nameof(StardewValley.Multiplayer.broadcastLocationDelta)), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(BroadcastLocationDelta_Prefix)));
 			harmonyInstance.Patch(original: AccessTools.Method(typeof(Multiplayer), nameof(StardewValley.Multiplayer.processIncomingMessage)), postfix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(ProcessIncomingMessage_Postfix)));
 			harmonyInstance.Patch(original: AccessTools.Method(typeof(Building), nameof(Building.updateInteriorWarps)), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(UpdateInteriorWarps_Prefix)));
+			harmonyInstance.Patch(original: AccessTools.Method(typeof(Cabin), nameof(Cabin.getPorchStandingSpot)), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(GetPorchStandingSpot_Prefix)));
 			harmonyInstance.Patch(original: AccessTools.Method(typeof(ChatBox), nameof(ChatBox.receiveChatMessage)), postfix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(ReceiveChatMessage_Postfix)));
 		}
 
@@ -162,6 +164,18 @@ namespace CabinStacker.Harmony
 				return true;
 			}
 		}
+
+		private static bool GetPorchStandingSpot_Prefix(Cabin __instance, ref Point __result)
+        {
+            try {
+				__result = new Point(__instance.warps.First().TargetX, __instance.warps.First().TargetY);
+				return false;
+			}
+			catch (Exception e) {
+				_monitor.Log($"Failed in {nameof(GetPorchStandingSpot_Prefix)}:\n{e}", LogLevel.Error);
+				return true;
+			}
+        }
 
         internal static void ReceiveChatMessage_Postfix(long sourceFarmer, string message)
         {
