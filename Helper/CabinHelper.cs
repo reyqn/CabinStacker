@@ -13,7 +13,7 @@ namespace CabinStacker.Helper
         public static void Warp(Farmer farmer, GameLocation target)
 		{
 			if (farmer.Equals(Game1.player)) {
-				farmer.warpFarmer(new Warp(0, 0, target.NameOrUniqueName, target.warps.First().X, target.warps.First().Y-1, false));
+				Game1.warpFarmer(target.NameOrUniqueName, target.warps.First().X, target.warps.First().Y-1, false);
 			}
 			else {
 				var message = new object[]

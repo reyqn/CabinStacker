@@ -27,6 +27,7 @@ namespace CabinStacker.Harmony
 			harmonyInstance.Patch(original: AccessTools.Method(typeof(GameServer), nameof(GameServer.sendAvailableFarmhands)), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(SendAvailableFarmhands_Prefix)));
 			harmonyInstance.Patch(original: AccessTools.Method(typeof(GameServer), nameof(GameServer.sendMessage), new[]{typeof(long), typeof(byte), typeof(Farmer), typeof(object[])}), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(SendMessage_Prefix)));
 			harmonyInstance.Patch(original: AccessTools.Method(typeof(Multiplayer), nameof(StardewValley.Multiplayer.broadcastLocationDelta)), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(BroadcastLocationDelta_Prefix)));
+			harmonyInstance.Patch(original: AccessTools.Method(typeof(Multiplayer), nameof(StardewValley.Multiplayer.processIncomingMessage)), postfix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(ProcessIncomingMessage_Postfix)));
 			harmonyInstance.Patch(original: AccessTools.Method(typeof(Building), nameof(Building.updateInteriorWarps)), prefix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(UpdateInteriorWarps_Prefix)));
 			harmonyInstance.Patch(original: AccessTools.Method(typeof(ChatBox), nameof(ChatBox.receiveChatMessage)), postfix: new HarmonyMethod(typeof(HarmonyPatcher), nameof(ReceiveChatMessage_Postfix)));
 		}
@@ -90,46 +91,32 @@ namespace CabinStacker.Harmony
 				if (loc.Root is null || !loc.Root.Dirty)
 					return false;
 				
-				var cabins = farm.buildings.Where(o => o.isCabin && _helper.Reflection.GetField<List<INetSerializable>>(o.NetFields, "fields").GetValue()[10].Dirty).Select(o => o.nameOfIndoors).ToArray();
-				if (cabins.Length != 1)
+				var dirtyDoors = farm.buildings.Where(o => o.isCabin && _helper.Reflection.GetField<List<INetSerializable>>(o.NetFields, "fields").GetValue()[10].Dirty).Select(o => o.nameOfIndoors).ToArray();
+				if (dirtyDoors.Length != 1) 
 					return true;
 				
-				var farmer = Game1.getAllFarmhands().Where(o => o.homeLocation.Value.Equals(cabins[0])).ToArray();
-
 				var data = Multiplayer.writeObjectDeltaBytes(loc.Root);
-				var strData = Convert.ToHexString(data);
-				
-				if (!strData.Contains("3F0000000F000000") || !strData.Contains("11FCFFFFFCFFFFFF"))
-					farmer = Array.Empty<Farmer>();
-				
 				var message = new OutgoingMessage(6, Game1.player, false, loc.Name, data);
-
 				void Action(Farmer f)
 				{
 					if (f == Game1.player) return;
 					Game1.server.sendMessage(f.UniqueMultiplayerID, message);
 				}
 
-				foreach (var farmers in Game1.otherFarmers.Values.Except(farmer))
-					Action(farmers);
+				var strData = Convert.ToHexString(data);
+				var movingFarmer = strData.Contains("11FCFFFFFCFFFFFF") ? Game1.getAllFarmhands().Where(o => o.homeLocation.Value.Equals(dirtyDoors.FirstOrDefault())).ToArray() : Array.Empty<Farmer>();
+				foreach (var farmer in Game1.otherFarmers.Values.Except(movingFarmer))
+					Action(farmer);
 
-				if (farmer.Length != 1) return false;
-
-				var warpIndex = strData.IndexOf("3F0000000F000000", StringComparison.Ordinal)/2;
+				if (movingFarmer.Length != 1) return false;
+				
 				var doorIndex = strData.IndexOf("11FCFFFFFCFFFFFF", StringComparison.Ordinal)/2;
-
-				data[warpIndex] = 64;
-				data[warpIndex+1] = 0;
-				data[warpIndex+2] = 0;
-				data[warpIndex+3] = 0;
-
 				data[doorIndex] = 18;
 				data[doorIndex+1] = 252;
 				data[doorIndex+2] = 255;
-				data[doorIndex+3] = 255;
-					
+				data[doorIndex+3] = 255;	
 				message = new OutgoingMessage(6, Game1.player, false, loc.Name, data);
-				Action(farmer.First());
+				Action(movingFarmer.First());
 
 				return false;
 			}
@@ -138,6 +125,21 @@ namespace CabinStacker.Harmony
 				return true;
 			}
 		}
+
+		private static void ProcessIncomingMessage_Postfix(IncomingMessage msg)
+        {
+            try
+            {
+				if (msg.MessageType != 6) return;
+				foreach(var cabin in Game1.getFarm().buildings.Where(o => o.isCabin)) {
+					cabin.updateInteriorWarps();
+				}
+            }
+			catch (Exception e)
+			{
+				_monitor.Log($"Failed in {nameof(ProcessIncomingMessage_Postfix)}:\n{e}", LogLevel.Error);
+			}
+        }
 
 		public static bool UpdateInteriorWarps_Prefix(Building __instance, GameLocation interior = null)
 		{
