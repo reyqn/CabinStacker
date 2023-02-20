@@ -53,7 +53,7 @@ namespace CabinStacker.Helper
 				},
 				humanDoor =
 				{
-					Value = new Point(-1006, -4)
+					Value = new Point(-1007, -4)
 				}
 			};
 			Game1.getFarm().buildings.Add(building);
@@ -62,7 +62,7 @@ namespace CabinStacker.Helper
 
 		public static void MoveCabinsForWarpingEvent()
 		{
-			var currentEvent = Game1.currentLocation?.currentEvent;
+			var currentEvent = Game1.CurrentEvent;
 			var isWarpingEvent = currentEvent?.isFestival == true || currentEvent?.isWedding == true;
 			if (_cabinsToMove == null && isWarpingEvent) {
                 _cabinsToMove = Game1.getFarm().buildings.Where(o => o.tileX.Value > 1000).ToArray();

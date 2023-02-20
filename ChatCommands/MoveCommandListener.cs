@@ -20,7 +20,10 @@ namespace CabinStacker.ChatCommands
                 return;
             }
             var isStackedCabin = cabin.tileX.Value > 1000;
-            cabin.humanDoor.Value = isStackedCabin ? new Point(2, 1) : new Point(-1006, -4);
+            if (!isStackedCabin) {
+                ModEntry.MovingFarmer = farmer;
+            }
+            cabin.humanDoor.Value = isStackedCabin ? new Point(2, 1) : new Point(-1007, -4);
             cabin.tilesWide.Value = isStackedCabin ? 5 : -1001;
             cabin.tilesHigh.Value = isStackedCabin ? 3 : -1;
             Game1.getFarm().buildStructure(cabin, new Vector2(isStackedCabin ? farmer.getTileX()-2 : 1070, isStackedCabin ? farmer.getTileY()-2 : 18), farmer, true);

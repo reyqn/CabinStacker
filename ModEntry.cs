@@ -10,6 +10,8 @@ namespace CabinStacker
 {
     public class ModEntry : Mod
     {
+        public static Farmer MovingFarmer { get; set; }
+
         public override void Entry(IModHelper helper)
         {
             HarmonyPatcher.Initialize(Monitor, ModManifest.UniqueID);
@@ -21,11 +23,8 @@ namespace CabinStacker
         {
             //Those values aren't loaded from the save for some reason
             foreach (var cabin in Game1.getFarm().buildings.Where(o => o.tileX.Value > 1000)) {
-                cabin.humanDoor.Value = new Point(-1006, -4);
+                cabin.humanDoor.Value = new Point(-1007, -4);
             }
-
-            var farmhouseWarp = Game1.getLocationFromName("FarmHouse").warps.First();
-            Game1.getFarm().warps.Add(new Warp(64, 14, Game1.player.homeLocation.Value, farmhouseWarp.X, farmhouseWarp.Y - 1, false));
         }
 
         private static void OnUpdate(object sender, UpdateTickedEventArgs e)

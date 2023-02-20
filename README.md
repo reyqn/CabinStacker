@@ -2,7 +2,7 @@
 
 This is a Stardew Valley mod allowing you to play with as many players as you want (set playerLimit to whatever you want in %appdata%/StardewValley/startup_preferences), without having cabins taking up too much space on your farm.
 
-- Every player running into the main FarmHouse door à la platform 9¾ will enter their own cabin (you shouldn't click on the door).
+- Every player entering the main FarmHouse will enter their own cabin.
 
 - If a cabin is missing and a new player wants to join, a new one will automatically be created.
 
