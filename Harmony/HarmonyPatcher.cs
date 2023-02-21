@@ -168,7 +168,11 @@ namespace CabinStacker.Harmony
 		private static bool GetPorchStandingSpot_Prefix(Cabin __instance, ref Point __result)
         {
             try {
-				__result = new Point(__instance.warps.First().TargetX, __instance.warps.First().TargetY);
+				var building = Game1.getFarm().buildings.First(o => o.nameOfIndoors.Equals(__instance.NameOrUniqueName));
+				if (building.tileX.Value < 1000 && CabinHelper.CabinsToMove?.Contains(building) != true)
+					return true;
+
+				__result = new Point(66, 15);
 				return false;
 			}
 			catch (Exception e) {

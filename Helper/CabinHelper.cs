@@ -8,7 +8,7 @@ namespace CabinStacker.Helper
 {
 	internal static class CabinHelper {
 		
-        private static Building[] _cabinsToMove;
+        public static Building[] CabinsToMove;
 
         public static void Warp(Farmer farmer, GameLocation target)
 		{
@@ -64,20 +64,20 @@ namespace CabinStacker.Helper
 		{
 			var currentEvent = Game1.CurrentEvent;
 			var isWarpingEvent = currentEvent?.isFestival == true || currentEvent?.isWedding == true;
-			if (_cabinsToMove == null && isWarpingEvent) {
-                _cabinsToMove = Game1.getFarm().buildings.Where(o => o.tileX.Value > 1000).ToArray();
-                foreach(var cabin in _cabinsToMove) {
+			if (CabinsToMove == null && isWarpingEvent) {
+                CabinsToMove = Game1.getFarm().buildings.Where(o => o.tileX.Value > 1000).ToArray();
+                foreach(var cabin in CabinsToMove) {
                     cabin.tileX.Value = 63;
                     cabin.tileY.Value = 17;
                 }
             }
-            else if (_cabinsToMove != null && !isWarpingEvent)
+            else if (CabinsToMove != null && !isWarpingEvent)
             {
-                foreach(var cabin in _cabinsToMove) {
+                foreach(var cabin in CabinsToMove) {
                     cabin.tileX.Value = 1070;
                     cabin.tileY.Value = 18;
                 }
-                _cabinsToMove = null;
+                CabinsToMove = null;
             }
 		}
     }
